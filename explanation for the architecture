@@ -1,0 +1,83 @@
+Three tier web app in aws:
+First we should configured a internet gateway to configure incoming and outgoing traffic with the vpc.
+And then natgateway needs to be created in any of the public subnets.
+For the best practice it is recommended to create multiple nat gateways for redundancy.
+The nat gateway should be implemented in the public subnets because natgateway is used to facilitate outgoing internet traffic for a private subnets. It needs to reside in the public subnets.
+After the gateway are created we will need to create the corresponding route tables for web, app, and db. Subnets.
+Once the network infrastructure to host three tier application is created we can start with the  application components.
+1- route 53
+2- load balancer: we can directly access the application via application load balancer.
+3- then we will create two ec2 instances on both availability zones and install php and Apache on it 
+4- we will create the rds instances.
+
+
+The technical part :
+
+1- first we will create the vpc
+2- we will create 3 subnets for each availability zone. (1 public for the web, 2 private one for the app, and the other one for the db)
+3- we will create three route tables one for the web and one for the app and one for the db
+4- we will associate the subnets with the route tables.
+We will select the web-route-table then click on subnet association and choose the web subnets across the availability zones I have let’s say we have 3. Web for subnet 1 and web for subnet 2 and web for subnet 3.
+
+And then we will do the same we will associate the subnets for app and for the db with the route tables as the previous step we have done with web route table association.
+
+5- once the route tables have been created we have to establish the connectivity, so for that we will require internet gateway for public web subnet.
+
+6- once the internet gateway created we have to attach it to the vpc.
+
+7- we will create the natgateway, we will create natgateway for each public subnet in each availability zone.
+
+8- so once the internet gateway and natgateway have created, we have to make changes to the route tables so that the connectivity to the internet will be established from your internet gateway for the public subnets and the natgateway for the private subnets.
+
+9- so we will go the web-route-table and edit the web route table and add a route and add the internet gateway.
+And we will do the same for the app and the database but instead of internet gateway we have to add natgateway.
+
+
+Now we will start to deploy the application component:
+
+1- we will go to the ec2 instance we will launch an instance, and while creating the ec2 instance we have to choose an image then choose the vpc we have created before, then we have to choose the public subnet and then we will choose enable for the auto sign public ip then you will configure the storage option for the ec2 instance and add tags, then we will create a new security group, then we will create a new key pair, then click the launch instances, but before we have to ensure that we have downloaded the .pem key.
+
+2- then we will create the php instances for example, we will do as the previous steps but you have to choose in the subnets (app subnet).
+In the security group we will allow the ssh connection for this app server only from the jump server(web server), so in the source in the security group we will remove the entry put the my jump server SG (web server).
+And for the key pair we already have it.
+
+3- after that we will do the same configuration for the php server (ec2 instance) for the other subnets in the availability zones. For (private- subnet- 2), and for the security group we will use the one that we have created for the php-1
+And the same for the key.
+
+4- so after the all servers (instances) in the running state, we will try to connect to jump server from our local machine.
+We will type the following command on the local machine the following command for giving the appropriate permissions to the key pair:
+$chmod 400 mykeypair.pem
+And then let’s try to connect to the jump server using the following command:
+$ssh -I “mykeypair.pem” ec2-user@3………
+
+5- let’s try to copy our ssh key and give the appropriate permissions for the ssh key using the following command:
+$ chmod 400 mykeypair.pem
+
+6- now we will connect to the php app server using the ssh from the instance 
+Connect —> ssh (copy it ) —> paste it on the local machine.
+
+7- now he have to install php and Apache on the app server.
+You have to to yum update
+Then install the required packages 
+Then install our Apache server
+Then we will start the Apache server 
+Then we will enable the Apache service 
+
+8- let’s give appropriate permission to our ec2 user
+The command is : 
+$sudo usermod -a -G Apache ec2-user
+Then we will change the ownership of our www folder using the following command:
+$ sudo chmod 2775 /var/www -type d -exec sudo chmod 2775 {} \;
+
+9- so as a sample application we will install php my admin and when rds is created.
+
+10- so after everything is done and all the apps are created, we will move towards creation of load balancer.
+
+11- let’s create an application load balancer 
+We will select the vpc
+And select the availability zones as public subnets (public web subnets1) and (public web subnet2)
+And then we will go to the security group settings we will create a new one.
+Then we will create a new target group.
+
+12- we need to allow the load balancer security group in our app server security group.
+We will go to the instances and select the my php app server 1 and click on security and select our php app security group and edit the inbound rules then we will add a rule port 80 choose the security group of the application load balancer. This will establish a connectivity between my application load balancer and the instances.
